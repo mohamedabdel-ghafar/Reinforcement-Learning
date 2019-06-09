@@ -57,3 +57,14 @@ class ReplayBuffer:
         rewards = batch[:, 2*self.state_size+1]
         done = batch[:, 2*self.state_size+2]
         return states, actions, n_states, rewards, done
+
+
+class PrioritizedReplayBuffer():
+    def __init__(self):
+        pass
+
+    def experience(self, state, action, next_state, reward, done, priority):
+        pass
+
+    def sample(self, batch_size):
+        pass

@@ -38,9 +38,12 @@ class BasicInputDQNN(DiscreteQNeuralNetwork):
         assert num_actions > 0
         self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None] + state_dim)
         self.last_out = self.state_ph
-        for _ in range(num_fc_layers):
-            self.last_out = tf.layers.Dense(100, activation=tf.nn.leaky_relu)(self.last_out)
-        self.last_out = tf.layers.Dense(num_actions, activation=tf.nn.softmax)(self.last_out)
+        for _ in range(num_fc_layers//2):
+            self.last_out = tf.layers.Dense(100, activation=tf.nn.tanh)(self.last_out)
+        for _ in range(num_fc_layers//2):
+            self.last_out = tf.layers.Dense(100, activation=tf.nn.relu)(self.last_out)
+
+        self.last_out = tf.layers.Dense(num_actions, activation=tf.identity)(self.last_out)
 
     def run(self):
         return self.last_out
@@ -48,4 +51,25 @@ class BasicInputDQNN(DiscreteQNeuralNetwork):
     def get_state_ph(self):
         return self.state_ph
 
+
+class BasicInputDuelingDQN(DiscreteQNeuralNetwork):
+    def __init__(self, state_dim, num_fc_layers, num_actions):
+        if isinstance(state_dim, int):
+            state_dim = [state_dim]
+        assert  num_actions > 0
+        assert num_fc_layers > 0
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None]+state_dim)
+        self.last_out = self.state_ph
+        for _ in range(num_fc_layers):
+            self.last_out = tf.keras.layers.Dense(100, activation=tf.nn.leaky_relu)(self.last_out)
+        # advantage channel
+        v_s = tf.keras.layers.Dense(1, activation=tf.identity)(self.last_out)
+        q_s_a = tf.keras.layers.Dense(num_actions, activation=tf.identity)(self.last_out)
+        self.last_out = q_s_a + v_s
+
+    def run(self):
+        return self.last_out
+
+    def get_state_ph(self):
+        return self.state_ph
 
