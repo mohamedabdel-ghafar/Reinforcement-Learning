@@ -1,6 +1,5 @@
 from . import RLAgnet, ReplayBuffer
 import tensorflow as tf
-from tensorflow.contrib import slim
 
 
 class DQNAgent(RLAgnet):
@@ -56,3 +55,10 @@ class DQNAgent(RLAgnet):
         ckpt = tf.train.get_checkpoint_state(path)
         model_path = ckpt.model_chekpoint_path
         self.saver.restore(sess, model_path)
+
+    def get_status_ph(self):
+        return self.state_ph
+
+    @classmethod
+    def agent_type(cls):
+        return "DDQN_AGENT"

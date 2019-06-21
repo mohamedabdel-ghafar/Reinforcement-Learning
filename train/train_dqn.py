@@ -1,19 +1,23 @@
 import tensorflow as tf
 from agents.DQN import DQNAgent
-from tf_util.nn_helper import BasicInputDuelingDQN, ImageInputDQNN, BasicInputDQNN
+from tf_util.nn_helper import BasicInputDuelingDQN, ImageInputDQNN
 import gym
 from numpy import random
-from os.path import relpath
+from os.path import relpath, join, isdir
+from os import mkdir
 
 
-def train(env: gym.Env):
+def train(env: gym.Env, gym_id):
     UPDATE_FREQ = 100
     EPS = 1
     E_EPS = 0.1
     DOWN_STEP = (EPS - E_EPS) / 50000
     SAVE_STEP = 10000
     GAMMA = 0.99
-    save_path = relpath("../saves/")
+    save_path = relpath("../saves/dqn")
+    save_path = join(save_path, gym_id)
+    if not isdir(save_path):
+        mkdir(save_path)
     assert isinstance(env.action_space, gym.spaces.discrete.Discrete)
     num_actions = env.action_space.n
     print(str(num_actions) + " actions available in this env")
@@ -59,7 +63,7 @@ def train(env: gym.Env):
         # summary_writer = tf.summary.FileWriter("../saves/", sess.graph)
         loss_steps = 0
         avg_loss = 0.0
-        for i in range(100000):
+        for i in range(10000):
             curr_state = env.reset()
             done = False
             reward_per_ep.append(0)
@@ -94,9 +98,11 @@ def train(env: gym.Env):
             print("AVG reward per episode {}".format((sum(reward_per_ep) / len(reward_per_ep))))
             print("average loss: {}, curr eps: {}".format(avg_loss, EPS))
             # summary_writer.flush()
+    # deploy_model(sess, save_path)
 
 
 if __name__ == "__main__":
-    env = gym.make("Acrobot-v1")
-    train(env)
+    env_name = "Acrobot-v1"
+    env = gym.make(env_name)
+    train(env, env_name)
 
