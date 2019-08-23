@@ -120,3 +120,84 @@ class ImageInputDiscretePGNN(PolicyGradientNN):
 
     def get_state_ph(self):
         return self.state_ph
+
+
+class DDPGActorNetwork:
+
+    def __init__(self, state_dims, action_dims):
+        raise NotImplementedError
+
+    def get_state_ph(self):
+        raise NotImplementedError
+
+    def get_action_op(self):
+        raise NotImplementedError
+
+    @classmethod
+    def get_default_ddpg_agent(cls, state_dims, num_actions):
+        agent = cls(state_dims, num_actions)
+        return agent.get_state_ph(), agent.get_action_op()
+
+
+class DDPGCriticNetwork:
+    def __init__(self, state_dims, action_dims):
+        raise NotImplementedError
+
+    def get_state_ph(self):
+        raise NotImplementedError
+
+    def get_action_ph(self):
+        raise NotImplementedError
+
+    def get_value_op(self):
+        raise NotImplementedError
+
+    @classmethod
+    def get_default_ddpg_agent(cls, state_dims, num_actions):
+        agent = cls(state_dims, num_actions)
+        return agent.get_state_ph(), agent.get_action_ph(), agent.get_value_op()
+
+
+class SimpleDDPGActor(DDPGActorNetwork):
+    def __init__(self, state_dims, num_actions):
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None] + state_dims)
+        self.action_op = self.state_ph
+        for _ in range(3):
+            self.action_op = tf.layers.Dense(100, activation=tf.nn.leaky_relu)(self.action_op)
+            self.action_op = tf.layers.BatchNormalization()(self.action_op)
+
+        self.action_op = tf.layers.Dense(num_actions, activation=tf.identity)(self.action_op)
+
+    def get_action_op(self):
+        return self.action_op
+
+    def get_state_ph(self):
+        return self.state_ph
+
+
+class SimpleDDPGCritic(DDPGCriticNetwork):
+    def __init__(self, state_dims, action_dims):
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None]+state_dims)
+        self.action_ph = tf.placeholder(dtype=tf.float32, shape=[None]+action_dims)
+        l_1 = tf.layers.Dense(100)(self.state_ph)
+        l_2 = tf.layers.Dense(100)(self.action_ph)
+        num_units = 100
+        self.q_s_a = l_1 + l_2
+        for _ in range(2):
+            self.q_s_a = tf.layers.Dense(num_units)(self.q_s_a)
+            num_units //= 2
+            self.q_s_a = tf.layers.BatchNormalization()(self.q_s_a)
+        self.q_s_a = tf.layers.Dense(1)(self.q_s_a)
+
+    def get_state_ph(self):
+        return self.state_ph
+
+    def get_action_ph(self):
+        return self.action_ph
+
+    def get_value_op(self):
+        return self.q_s_a
+
+
+
+
