@@ -51,9 +51,7 @@ def export_model(input_nodes_names, output_node_name):
 #     del g
 #     return frozen_graph_def
 
-
-
-def deploy_model(rl_agent:RLAgnet, sess: Session, save_path, env_id, model_v):
+def deploy_model(rl_agent: RLAgnet, sess: Session, save_path, env_id, model_v):
     status_tensor = rl_agent.get_status_ph()
     action_tensor = rl_agent.get_action_op()
     model_path = relpath(join(save_path, env_id, model_v))

@@ -1,4 +1,4 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 
 class DiscreteQNeuralNetwork:
@@ -124,7 +124,7 @@ class ImageInputDiscretePGNN(PolicyGradientNN):
 
 class DDPGActorNetwork:
 
-    def __init__(self, state_dims, action_dims):
+    def __init__(self, state_dims, action_dims, action_lows, action_highs):
         raise NotImplementedError
 
     def get_state_ph(self):
@@ -134,8 +134,8 @@ class DDPGActorNetwork:
         raise NotImplementedError
 
     @classmethod
-    def get_default_ddpg_agent(cls, state_dims, num_actions):
-        agent = cls(state_dims, num_actions)
+    def get_default_ddpg_agent(cls, state_dims, num_actions, action_lows, action_highs):
+        agent = cls(state_dims, num_actions, action_lows, action_highs)
         return agent.get_state_ph(), agent.get_action_op()
 
 
@@ -159,14 +159,16 @@ class DDPGCriticNetwork:
 
 
 class SimpleDDPGActor(DDPGActorNetwork):
-    def __init__(self, state_dims, num_actions):
-        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None] + state_dims)
+    def __init__(self, state_dims, num_actions, action_lows, action_highs):
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None] + list(state_dims))
         self.action_op = self.state_ph
         for _ in range(3):
-            self.action_op = tf.layers.Dense(100, activation=tf.nn.leaky_relu)(self.action_op)
+            self.action_op = tf.layers.Dense(100, activation=tf.nn.relu)(self.action_op)
             self.action_op = tf.layers.BatchNormalization()(self.action_op)
-
-        self.action_op = tf.layers.Dense(num_actions, activation=tf.identity)(self.action_op)
+        self.action_op = tf.layers.Dense(num_actions, activation=tf.nn.sigmoid)(self.action_op)
+        scale = action_highs - action_lows
+        self.action_op = tf.multiply(self.action_op, scale)
+        self.action_op = action_lows + self.action_op
 
     def get_action_op(self):
         return self.action_op
@@ -176,9 +178,9 @@ class SimpleDDPGActor(DDPGActorNetwork):
 
 
 class SimpleDDPGCritic(DDPGCriticNetwork):
-    def __init__(self, state_dims, action_dims):
-        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None]+state_dims)
-        self.action_ph = tf.placeholder(dtype=tf.float32, shape=[None]+action_dims)
+    def __init__(self, state_dims, action_size):
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None]+list(state_dims))
+        self.action_ph = tf.placeholder(dtype=tf.float32, shape=[None, action_size])
         l_1 = tf.layers.Dense(100)(self.state_ph)
         l_2 = tf.layers.Dense(100)(self.action_ph)
         num_units = 100

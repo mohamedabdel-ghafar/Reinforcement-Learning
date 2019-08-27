@@ -28,17 +28,19 @@ class RLAgnet:
 class ReplayBuffer:
     max_len = 100000
 
-    def __init__(self, state_dim):
+    def __init__(self, state_dim, action_size=1):
+
         self.buffer = None
         self.state_dim = state_dim
         self.state_size = 1
         for element in self.state_dim:
             self.state_size *= element
         self.next = 0
+        self.action_size = action_size
 
         def preprocess_element(state, action, next_state, reward, done):
-            element = concatenate((reshape(state, (-1)), [action], reshape(next_state, (-1)), [reward, done]),
-                                  axis=0)
+            element = concatenate((reshape(state, (-1)), reshape(action, (-1)), reshape(next_state, (-1)),
+                                   [reward, done]), axis=0)
             return reshape(element, (-1))
         self.preprocess = preprocess_element
 
@@ -59,10 +61,13 @@ class ReplayBuffer:
             batch.append(self.buffer[indx])
         batch = array(batch)
         states = reshape(batch[:, range(self.state_size)], (-1, )+self.state_dim)
-        actions = batch[:, self.state_size]
-        n_states = reshape(batch[:, range(self.state_size+1, self.state_size*2+1)], (-1, )+self.state_dim)
-        rewards = batch[:, 2*self.state_size+1]
-        done = batch[:, 2*self.state_size+2]
+        actions = batch[:, range(self.state_size, self.state_size+self.action_size)]
+        actions = reshape(actions, (-1, self.action_size))
+        n_states = reshape(batch[:, range(self.state_size+self.action_size,
+                                          self.state_size*2+self.action_size)],
+                           (-1, )+self.state_dim)
+        rewards = reshape(batch[:, 2*self.state_size+self.action_size], (-1, 1))
+        done = reshape(batch[:, 2*self.state_size+self.action_size+1], (-1, 1))
         return states, actions, n_states, rewards, done
 
 
