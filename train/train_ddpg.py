@@ -1,12 +1,13 @@
 from agents.ddpg import DDPGAgent
 from tf_util.nn_helper import SimpleDDPGActor, SimpleDDPGCritic
 import tensorflow.compat.v1 as tf
-tf.disable_v2_behavior()
 import gym
 import numpy as np
 import time
 from os.path import join, isdir
 from os import mkdir, curdir
+
+tf.disable_v2_behavior()
 EXPLORATION_RATIO = 0.1
 BATCH_SIZE = 32
 GAMMA = 0.01
@@ -15,7 +16,7 @@ TRAIN_STEP = 10
 EPS_STEP = (1 - EXPLORATION_RATIO) / 10000
 
 
-def train(env: gym.Env, num_eps=100):
+def train(env: gym.Env, num_eps=100, show=False):
     assert isinstance(env.action_space, gym.spaces.Box)
     prev = np.zeros(shape=env.action_space.shape)
     mu = np.zeros(env.action_space.shape)
@@ -72,6 +73,8 @@ def train(env: gym.Env, num_eps=100):
                     action = sess.run(ddpg_agent.action_op, feed_dict={
                         ddpg_agent.state_ph: [s]
                     })[0]
+                if show:
+                    env.render()
                 s_p, r, done, _ = env.step(action)
                 ddpg_agent.experience(s, action, s_p, r, done)
                 env_step_counter += 1
@@ -100,7 +103,7 @@ def train(env: gym.Env, num_eps=100):
                     if training_step_counter % SAVE_RATE == 0:
                         if not isdir(join(curdir, "models", "ddpg")):
                             mkdir(join(curdir, "models", "ddpg"))
-                        ddpg_agent.save(join(curdir, "models", "ddpg", "model.ckpt"), sess,
+                        ddpg_agent.save(join(curdir, "models", "ddpg", "model"), sess,
                                         training_step_counter)
             print(curr_episode_rewrads)
         ddpg_agent.export(join(curdir, "models", "export",
@@ -108,5 +111,6 @@ def train(env: gym.Env, num_eps=100):
 
 
 if __name__ == "__main__":
-    train(gym.make("MountainCarContinuous-v0"))
+    train(gym.make("MountainCarContinuous-v0"), show=False)
+
 

@@ -12,6 +12,62 @@ class DiscreteQNeuralNetwork:
         raise NotImplementedError
 
 
+# for model-based rl
+class ModelNN:
+    def __init__(self, state_dim, action_dim):
+        raise NotImplementedError
+
+    def get_predict_op(self):
+        raise NotImplementedError
+
+    def get_state_ph(self):
+        raise NotImplementedError
+
+    def get_action_ph(self):
+        raise NotImplementedError
+
+    @classmethod
+    def get_default(cls, state_dim, action_dim):
+        nn = cls(state_dim, action_dim)
+        return nn.get_state_ph(), nn.get_action_ph(), nn.get_predict_op()
+
+
+class BasicModelNN(ModelNN):
+    def __init__(self, state_dim, action_dim):
+        assert(isinstance(state_dim, int) or isinstance(state_dim, list)
+               or isinstance(state_dim, tuple))
+        assert(isinstance(action_dim, int) or isinstance(action_dim, list)
+               or isinstance(action_dim, tuple))
+        assert isinstance(state_dim, int) or len(state_dim) < 3
+        self.state_size = 1
+        self.action_size = 1
+        action_dim = list(action_dim)
+        state_dim = list(state_dim)
+        for d in state_dim:
+            self.state_size *= d
+        for d in action_dim:
+            self.action_size *= d
+        self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.state_size])
+        self.action_ph = tf.placeholder(dtype=tf.float32, shape=[None, self.action_size])
+        self.predict_op = tf.concat([self.state_ph, self.action_ph], axis=1)
+        n_units = self.state_size + self.action_size // 2
+        n_units = max(n_units, 1)
+        for _ in range(3):
+            self.predict_op = tf.keras.layers.Dense(n_units, activation=tf.nn.leaky_relu)(self.predict_op)
+            n_units = n_units // 2
+            n_units = max(n_units, 1)
+        self.predict_op = tf.keras.layers.Dense(self.state_size)
+
+    def get_action_ph(self):
+        return self.action_ph
+
+    def get_state_ph(self):
+        return self.state_ph
+
+    def get_predict_op(self):
+        return self.predict_op
+
+
 class ImageInputDQNN(DiscreteQNeuralNetwork):
     def __init__(self, num_image_layers, num_channels, num_fc_layers, num_outputs):
         self.state_ph = tf.placeholder(dtype=tf.float32, shape=[None, None, None, num_channels])
